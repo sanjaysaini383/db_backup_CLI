@@ -18,6 +18,7 @@ Table of Contents
 - [Extending the project](#extending-the-project)
 - [Security considerations](#security-considerations)
 - [Troubleshooting](#troubleshooting)
+- [Related projects](#related-projects)
 - [License](#license)
 - [Author](#author)
 
@@ -244,6 +245,14 @@ FLUSH PRIVILEGES;
 
 - Unknown database: confirm the database exists (SHOW DATABASES;) and update `config.json`.
 - Missing client tools (mysqldump/pg_dump): install DB client tools or use Python-based backup where available.
+
+---
+
+## Related projects
+
+- Database Backup Utility (Roadmap.sh) — https://roadmap.sh/projects/database-backup-utility
+
+This entry links to a community-curated roadmap and related project resources for building database backup utilities.
 
 ---
 
