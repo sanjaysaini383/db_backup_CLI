@@ -1,351 +1,267 @@
 # Database Backup CLI Utility
 
-A cross-database command-line tool for backing up and restoring databases with optional compression, logging, and cloud upload support.  
-Currently supports MySQL, PostgreSQL, MongoDB, and SQLite.
+A cross-database command-line tool for backing up and restoring databases with optional compression, logging, and cloud upload support. Currently supports MySQL, PostgreSQL, MongoDB, and SQLite.
+
+---
+
+Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Project structure](#project-structure)
+- [Logging](#logging)
+- [Implementation overview](#implementation-overview)
+- [Extending the project](#extending-the-project)
+- [Security considerations](#security-considerations)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+- [Author](#author)
 
 ---
 
 ## Features
 
-- Supports multiple DBMS:
-  - MySQL
-  - PostgreSQL
-  - MongoDB
-  - SQLite
-- Full database backup to a single file or directory (depending on DB type).
-- Restore from generated backup files.
-- Optional backup compression using `tar.gz`.
-- Optional cloud upload:
-  - AWS S3
-  - (Extensible for GCS / Azure if you want to enable them later)
-- Simple, JSON-based configuration.
-- Operation logging to a log file.
-- Extensible code structure:
-  - Separate modules for CLI, DB operations, utilities.
+- Multi-DBMS support: MySQL, PostgreSQL, MongoDB, SQLite
+- Full backup and restore workflows
+- Optional compression (tar.gz)
+- Optional cloud upload (AWS S3; extensible to GCS/Azure)
+- JSON-based configuration
+- Operation logging
+- Extensible modular code (CLI, DB ops, utils)
 
 ---
 
-## Project Structure
+## Quick Start
 
-db-backup-cli/
-├── cli.py # Main CLI entrypoint
-├── db_operations.py # DB connection, backup & restore logic
-├── utils.py # Logging, compression, cloud upload helpers, notifications
-├── config.json # Local configuration (NOT committed)
-├── config.example.json # Example configuration (safe to commit)
-├── requirements.txt # Python dependencies
-├── .gitignore # Ignored files (venv, backups, logs, config.json, etc.)
-└── README.md # Project documentation
+1. Clone the repository:
 
+```bash
+git clone https://github.com/sanjaysaini383/db_backup_CLI.git
+cd db_backup_CLI
+```
+
+2. Create and activate a virtual environment (Python 3.8+):
+
+```bash
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# Linux / macOS
+source venv/bin/activate
+```
+
+3. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+4. Copy and edit the example config:
+
+```bash
+cp config.example.json config.json
+# edit config.json to match your environment
+```
 
 ---
 
 ## Requirements
 
 - Python 3.8+
-- For MySQL:
-  - MySQL server running locally or remotely
-  - `mysql-connector-python`
-- For PostgreSQL (optional):
-  - PostgreSQL server
-  - `psycopg2-binary`
-- For MongoDB (optional):
-  - MongoDB server
-  - `pymongo`
-- For cloud upload (optional):
-  - AWS account and credentials (if using S3)
-
-All required Python packages are listed in `requirements.txt`.
+- Optional DB client libraries (listed in requirements.txt):
+  - MySQL: `mysql-connector-python`
+  - PostgreSQL: `psycopg2-binary`
+  - MongoDB: `pymongo`
+- For cloud uploads: AWS credentials if using S3
 
 ---
 
 ## Installation
 
-### 1. Clone the repository
-git clone https://github.com/<YOUR_USERNAME>/db-backup-cli.git
-cd db-backup-cli
-
-
-### 2. Create and activate a virtual environment
-
-Create virtual environment
-python -m venv venv
-
-Activate (Windows)
-venv\Scripts\activate
-
-Activate (Linux/Mac)
-source venv/bin/activate
-
-
-### 3. Install dependencies
-pip install -r requirements.txt
-
-
+Follow the Quick Start steps above to clone the repo, create a venv, and install dependencies.
 
 ---
 
 ## Configuration
 
-The tool uses a JSON configuration file to store database credentials and (optionally) cloud credentials.
+Copy `config.example.json` -> `config.json` and fill in credentials. `config.json` is ignored via `.gitignore`.
 
-### 1. Create `config.json`
+Example minimal MySQL config:
 
-Copy the example file and adapt it:
-
-
-Edit `config.json` to match your environment. Minimal example for local MySQL:
-
+```json
 {
-"database": {
-"host": "localhost",
-"port": 3306,
-"user": "backup_user",
-"password": "backup123",
-"database": "mydb"
+  "database": {
+    "type": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "user": "backup_user",
+    "password": "backup123",
+    "database": "mydb"
+  }
 }
-}
+```
 
+Example with AWS S3:
 
-If you want to enable S3 uploads:
-
+```json
 {
-"database": {
-"host": "localhost",
-"port": 3306,
-"user": "backup_user",
-"password": "backup123",
-"database": "mydb"
-},
-"aws": {
-"access_key": "YOUR_AWS_ACCESS_KEY",
-"secret_key": "YOUR_AWS_SECRET_KEY",
-"region": "us-east-1"
+  "database": {
+    "type": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "user": "backup_user",
+    "password": "backup123",
+    "database": "mydb"
+  },
+  "aws": {
+    "access_key": "YOUR_AWS_ACCESS_KEY",
+    "secret_key": "YOUR_AWS_SECRET_KEY",
+    "region": "us-east-1",
+    "bucket": "your-backup-bucket"
+  }
 }
-}
-
-
-> `config.json` is intentionally excluded via `.gitignore` to avoid committing secrets.
+```
 
 ---
 
 ## Usage
 
-All commands are run from the project root with the virtual environment activated.
+Run commands from the project root with the virtual environment activated.
 
-### General CLI format
+General CLI format:
 
+```bash
 python cli.py <operation> --db-type <db_type> --config config.json [options]
+```
 
+Operations:
+- `test` — test database connection
+- `backup` — create a backup
+- `restore` — restore from a backup file
 
-- `operation`:
-  - `test`    – test database connection
-  - `backup`  – create a backup
-  - `restore` – restore from a backup file
-- `db-type`:
-  - `mysql`
-  - `postgresql`
-  - `mongodb`
-  - `sqlite`
+Supported db-type values: `mysql`, `postgresql`, `mongodb`, `sqlite`
 
----
+Examples:
 
-### 1. Test Database Connection
+- Test connection:
 
-Use this first to confirm that credentials in `config.json` are correct.
-
+```bash
 python cli.py test --db-type mysql --config config.json
+```
 
+- Basic backup:
 
-
-Expected output on success:
-
-- Logs in `backup.log`
-- Terminal message like:  
-  `✓ Connected to mysql database`  
-  `✓ Connection successful!`
-
----
-
-### 2. Backup
-
-#### Basic backup
-
+```bash
 python cli.py backup --db-type mysql --config config.json --output mydb_backup.sql
+```
 
+- Backup with compression:
 
-- For MySQL/PostgreSQL/SQLite:
-  - Creates a `.sql` or `.dump` file depending on implementation.
-- For MongoDB:
-  - Creates a directory with BSON dumps.
+```bash
+python cli.py backup --db-type mysql --config config.json --output mydb_backup.sql --compress
+```
 
-#### Backup with compression
+- Restore from file:
 
-python cli.py backup --db-type mysql --config config.json
---output mydb_backup.sql --compress
+```bash
+python cli.py restore --db-type mysql --config config.json --backup-file mydb_backup.sql
+```
 
-
-- Creates `mydb_backup.sql.tar.gz`
-- The original `mydb_backup.sql` file may be removed after compression (depending on implementation).
-
-#### Backup with timestamped filename (Windows PowerShell)
-
-python cli.py backup --db-type mysql --config config.json `
---output "mydb_$(Get-Date -Format 'yyyyMMdd_HHmmss').sql" --compress
-
-
-This will create files like:
-
-- `mydb_20251211_111500.sql.tar.gz`
+Notes:
+- MySQL/Postgres/SQLite backups produce SQL/dump files; MongoDB creates a directory of BSON files.
+- Compression yields a `.tar.gz` file (original SQL may be removed after compression depending on settings).
 
 ---
 
-### 3. Restore
+## Project structure
 
-> Warning: Restore can overwrite existing data. Use on test databases first.
-
-#### Restore from an uncompressed SQL file
-
-python cli.py restore --db-type mysql --config config.json --backup-file mydb_backup.sql
-
-
-The tool will:
-
-1. Decompress the `tar.gz` file.
-2. Restore the database from the decompressed SQL file.
+```
+db-backup-cli/
+├── cli.py               # Main CLI entrypoint
+├── db_operations.py     # DB connection, backup & restore logic
+├── utils.py             # Logging, compression, cloud upload helpers
+├── config.json          # Local configuration (NOT committed)
+├── config.example.json  # Example configuration (safe to commit)
+├── requirements.txt     # Python dependencies
+├── .gitignore           # Ignored files
+└── README.md            # Project documentation
+```
 
 ---
 
 ## Logging
 
-The tool logs all operations into a log file (default: `backup.log` in the project root).
-
-- Each run logs:
-  - Operation type (test/backup/restore)
-  - Start/end timestamps
-  - Database type and name
-  - Success or failure messages
-  - Errors/exceptions if any
-
-You can specify a custom log file via `--log-file` (if your CLI supports it), or adjust the logger in `utils.py`.
+- Default log file: `backup.log` in project root.
+- Each run records operation type, timestamps, DB info, and errors.
+- A custom log file can be specified via CLI (if supported) or by editing `utils.py` logger.
 
 ---
 
-## Implementation Overview
+## Implementation overview
 
-### `cli.py`
-
-- Parses command-line arguments (operation, db-type, config path, output, compression, cloud options).
-- Loads `config.json`.
-- Initializes logging.
-- Routes to the appropriate function in `db_operations.py` and `utils.py`:
-  - `connect_to_db`
-  - `backup_database`
-  - `restore_database`
-  - `compress_backup`
-  - `decompress_backup`
-  - `upload_to_cloud`
-  - `send_slack_notification` (if you enable it)
-
-### `db_operations.py`
-
-Handles:
-
-- Connecting to DB:
-  - MySQL via `mysql.connector`
-  - PostgreSQL via `psycopg2`
-  - MongoDB via `pymongo`
-  - SQLite via `sqlite3`
-- Backups:
-  - MySQL: Python-based export (CREATE TABLE + INSERT statements)
-  - PostgreSQL: `pg_dump` (if you enable it)
-  - MongoDB: `mongodump` (if you enable it)
-  - SQLite: `iterdump()` to SQL file
-- Restores:
-  - MySQL: executes SQL from backup file
-  - PostgreSQL: `pg_restore` (if enabled)
-  - MongoDB: `mongorestore` (if enabled)
-  - SQLite: executes SQL script
-
-### `utils.py`
-
-Provides helpers for:
-
-- Logging setup (`setup_logging`)
-- Compression:
-  - `compress_backup()` – create `.tar.gz`
-  - `decompress_backup()` – unpack archives
-- Cloud uploads (optional):
-  - `upload_to_cloud()` – S3 / GCS / Azure
-- Notifications (optional):
-  - `send_slack_notification()` – via webhook URL
+- cli.py: argument parsing, config loading, logging setup, routing to functions
+- db_operations.py: connect, backup, restore for supported DBs (MySQL via mysql.connector, PostgreSQL via pg_dump/psycopg2, MongoDB via mongodump/pymongo, SQLite via sqlite3)
+- utils.py: compression/decompression, upload_to_cloud, logging helpers, notifications
 
 ---
 
-## Extending the Project
+## Extending the project
 
-Here are some ideas to extend the project further:
-
-- Add incremental/differential backups per DB type.
-- Add scheduling (cron on Linux, Task Scheduler on Windows) with a wrapper script.
-- Add encryption for backup files before uploading to cloud.
-- Add a `list-backups` command to show available backups in local or cloud storage.
-- Add configuration validation with clear error messages.
-- Build a small TUI (text UI) or a minimal web dashboard to trigger backups.
+Suggestions:
+- Incremental/differential backups
+- Scheduling (cron / Task Scheduler)
+- Encrypt backups before upload
+- `list-backups` command for local/cloud listings
+- Configuration validation and clearer errors
+- Simple TUI or web dashboard
 
 ---
 
-## Security Considerations
+## Security considerations
 
 - Never commit `config.json` (contains credentials).
-- Use least-privilege DB users (e.g., a dedicated `backup_user` with only the necessary permissions).
-- Restrict access to your backup files and logs.
-- If uploading to cloud, rotate your API keys and use IAM roles where possible.
-- For production setups, consider encrypting backups at rest.
+- Use least-privilege DB users.
+- Restrict access to backup files and logs.
+- When using cloud storage, rotate keys and prefer IAM roles.
+- Consider encrypting backups at rest.
 
 ---
 
 ## Troubleshooting
 
-### 1. `Access denied for user`
+Common issues and fixes:
 
-- Verify username/password in `config.json`.
-- Check MySQL permissions:
+- Access denied for user: verify credentials and MySQL permissions.
 
+```sql
 GRANT ALL PRIVILEGES ON mydb.* TO 'backup_user'@'localhost';
 FLUSH PRIVILEGES;
+```
 
-
-### 2. `Unknown database 'mydb'`
-
-- Confirm the database exists:
-
-SHOW DATABASES;
-
-
-- Update the `database` field in `config.json` accordingly.
-
-### 3. `The system cannot find the file specified` (for `mysqldump`, `pg_dump`, etc.)
-
-- Either install DB client tools and add them to PATH, or use the pure-Python backup implementation (as your current code does for MySQL).
+- Unknown database: confirm the database exists (SHOW DATABASES;) and update `config.json`.
+- Missing client tools (mysqldump/pg_dump): install DB client tools or use Python-based backup where available.
 
 ---
 
 ## License
 
-You can choose a license such as MIT. Example:
+Choose a license such as MIT. Example header:
 
+```
 MIT License
 
-Copyright (c) 2025 <Your Name>
+Copyright (c) 2025 Sanjay Kumar Saini
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-
+```
 
 ---
 
 ## Author
 
-- **Name:** Sanjay Kumar Saini  
-- **GitHub:** [@sanjaysaini383](https://github.com/sanjaysaini383)
-
+- Name: Sanjay Kumar Saini
+- GitHub: @sanjaysaini383 (https://github.com/sanjaysaini383)
