@@ -1,0 +1,15 @@
+{
+  "database": {
+    "host": "localhost",
+    "port": 3306,
+    "user": "your_username",
+    "password": "your_password",
+    "database": "your_database"
+  },
+  "aws": {
+    "access_key": "your_aws_access_key",
+    "secret_key": "your_aws_secret_key",
+    "region": "us-east-1"
+  },
+  "slack_webhook": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+}
